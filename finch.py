@@ -5,7 +5,7 @@
 
 # http://www.finchrobot.com
 # See included examples and documentation for how to use the API
-...
+
 import time
 import finchconnection
 import random
@@ -15,11 +15,12 @@ class Finch():
     def __init__(self):
         self.connection = finchconnection.ThreadedFinchConnection()
         self.connection.open()
-        
+
+
     def led(self, *args):
         """Control three LEDs (orbs).
-       
-          - hex triplet string: led('#00FF8B') or 
+
+          - hex triplet string: led('#00FF8B') or
             0-255 RGB values: led(0, 255, 139)
         """
         if len(args) == 3:
@@ -34,6 +35,7 @@ class Finch():
             return
         self.connection.send(b'O', [r, g, b])
 
+
     def buzzer(self, duration, frequency):
         """ Outputs sound. Does not wait until a note is done beeping.
 
@@ -44,6 +46,7 @@ class Finch():
         self.connection.send(b'B',
                 [(millisec & 0xff00) >> 8, millisec & 0x00ff,
                  (frequency & 0xff00) >> 8, frequency & 0x00ff])
+
 
     def buzzer_with_delay(self, duration, frequency):
         """ Outputs sound. Waits until a note is done beeping.
@@ -57,6 +60,7 @@ class Finch():
                  (frequency & 0xff00) >> 8, frequency & 0x00ff])
         time.sleep(duration*1.05)
 
+
     def light(self):
         """ Get light sensor readings. The values ranges from 0.0 to 1.0.
 
@@ -69,6 +73,7 @@ class Finch():
             right = data[1] / 255.0
             return left, right
 
+
     def obstacle(self):
         """Get obstacle sensor readings.
 
@@ -79,22 +84,43 @@ class Finch():
         if data is not None:
             left = data[0] != 0
             right = data[1] != 0
-            return left, right 
+            return left, right
 
-    def temperature(self):
-        """ Returns temperature in degrees Celcius. """
-        
+
+    def temperature(self, unit = 'celsius'):
+        """ Returns temperature in degrees Celsius. """
+
         self.connection.send(b'T')
         data = self.connection.receive()
         if data is not None:
-            return (data[0] - 127) / 2.4 + 25;
+
+            celsius = (data[0] - 127) / 2.4 + 25;
+            fahrenheit = (celsius * 9/5) + 32
+            kelvin = celsius + 273.15
+
+            if unit != 'celsius':
+
+                if unit == 'Fahrenheit' or unit == 'fahrenheit':
+                    return fahrenheit
+
+                elif unit == 'Kelvin' or unit == 'kelvin':
+                    return kelvin
+
+                else:
+                    print('The unit you entered is unavailable. \n Here are the available units: celcius(default), fahrenheit, kelvin')
+                    return celsius
+
+            else:
+                return celsius
+
 
     def convert_raw_accel(self, a):
         """Converts the raw acceleration obtained from the hardware into G's"""
-        
+
         if a > 31:
             a -= 64
         return a * 1.6 / 32.0
+
 
     def acceleration(self):
         """ Returns the (x, y, z, tap, shake).  x, y, and z, are
@@ -108,7 +134,7 @@ class Finch():
             tap, shake are boolean values -- true if the correspondig event has
             happened.
         """
-        
+
         self.connection.send(b'A')
         data = self.connection.receive()
         if data is not None:
@@ -119,6 +145,7 @@ class Finch():
             shake = (data[4] & 0x80) != 0
             return (x, y, z, tap, shake)
 
+
     def wheels(self, left, right):
         """ Controls the left and right wheels.
 
@@ -126,12 +153,52 @@ class Finch():
         1.0 (full throttle forward).
         use left = right = 0.0 to stop.
         """
-        
+
         dir_left = int(left < 0)
         dir_right = int(right < 0)
         left = min(abs(int(left * 255)), 255)
         right = min(abs(int(right * 255)), 255)
         self.connection.send(b'M', [dir_left, left, dir_right, right])
+
+
+    def estimate_distance(self, time, speed, unit = 'feet'):
+
+        """Estimates the distance finch will travel given time in seconds finch
+           is allowed to travel and the speed the wheel() function is set at"""
+
+        distance_units = ['inches', 'centimeters', 'meters']
+
+        feet_per_second = 0.8 * speed
+        distance = feet_per_second * time
+
+        if unit != 'feet':
+
+            if unit in distance_units:
+
+                if unit == 'inches':
+                    return (distance * 12)
+
+                elif unit == 'centimeters':
+                    return (distance * 30.48)
+
+                elif unit == 'meters':
+                    return (distance / 3.281)
+
+            else:
+                print("That is an incorrect or unavailable unit. The accepted units are: inches, centimeters, meters")
+
+        else:
+            return str(distance) + ' feet'
+
+
+    def estimate_time(self, distance):
+        """Insert distance in feet to estimate time of travel"""
+
+        seconds_per_feet = 1.25
+        time = distance * seconds_per_feet
+
+        return str(time) + ' seconds'
+
 
     def halt(self):
         """ Set all motors and LEDs to off. """
@@ -141,59 +208,3 @@ class Finch():
     def close(self):
         self.connection.close()
 
-
-    """Start of added code - Cameron Nelson"""
-
-    def temperature_fahrenheit(self):
-        """Same as def temperature() but returns Fahrenheit instead of Celsius"""
-
-        celsius = self.temperature()
-        farenheit = (9/5 * celsius) + 32
-
-        return farenheit
-
-    def temperature_kelvin(self):
-        """Same as def temperature but returns kelvin instead of Celsius"""
-
-        celsius = self.temperature()
-        kelvin = celsius + 273.15
-
-        return kelvin
-
-
-    def fire_alarm(self, artificial_heat = 0):
-        """artifical heat, set to over 110 to simulate a fire"""
-
-        """Asks the temp sensor if the heat level in the room is high enough for a fire and if so, turns on a alarm."""
-
-        alarm_key = True
-        check_temp = 5
-
-        while alarm_key == True:
-            temp = self.temperature()
-            time.sleep(check_temp)
-
-            if temp > 110 or artificial_heat > 110:
-                check_temp = 0
-
-                self.led(255,255,255)  # Red
-                self.led(0,0,0)  # White
-                self.buzzer(0.1, 500)
-
-            else:
-                check_temp = 5
-
-
-    def random_led(self):
-
-        random_lchoice = random.randint(1,255)
-        random_lchoice2 = random.randint(1,255)
-        random_lchoice3 = random.randint(1,255)
-
-        self.led(random_lchoice, random_lchoice2, random_lchoice3)
-
-
-    def random_buzzer(self, duration):
-
-        random_b = random.randint(1,1000)
-        self.buzzer(duration, random_b)
