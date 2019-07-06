@@ -2,7 +2,6 @@ from finch import Finch
 import time
 import random
 
-
 class Finch_Simple():
 
     def __init__(self):
