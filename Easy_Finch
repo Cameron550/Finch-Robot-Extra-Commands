@@ -1,0 +1,80 @@
+from finch import Finch
+import time
+import random
+
+
+class Finch_Simple():
+
+    def __init__(self):
+        self.f = Finch()
+
+    def check_surroundings(self, my_direction = None):
+
+        """Turns the robot in all four directions to check surroundings
+           for obstacles."""
+
+        direction = ['north', 'west', 'south', 'east']
+
+        checked_surroundings = {}
+
+        for a in direction:
+            checked_surroundings[a] = self.f.obstacle()
+
+            self.f.wheels(0,1)
+            time.sleep(0.75)
+            self.f.wheels(0,0)
+            time.sleep(2)
+
+        """Asks if the user inputed a specific direction then returns that direction's'
+           obstacle values if they did."""
+
+        if my_direction != None:
+
+            if my_direction in direction:
+                return my_direction + ":" + str(checked_surroundings[my_direction])
+
+            else:
+                print("That is an invalid direction. Correct directions are: north, west, south, east")
+
+        return checked_surroundings
+
+
+    def fire_alarm(self, artificial_heat = 0):
+        """artifical heat, set to over 110 to simulate a fire"""
+
+        """Asks the temp sensor if the heat level in the room is high enough for
+           a fire, and if so, turns on a alarm."""
+
+        alarm_key = True
+        check_temp = 5
+
+        while alarm_key == True:
+            temp = self.f.temperature()
+            time.sleep(check_temp)
+
+            if temp > 110 or artificial_heat > 110:
+                check_temp = 0
+
+                self.f.led(255,255,255)  # Red
+                self.f.led(0,0,0)  # White
+                self.f.buzzer(0.1, 500)
+
+            else:
+                check_temp = 5
+
+
+    def random_led(self):
+        """Emits a random light on the finch robot"""
+
+        random_lchoice = random.randint(1,255)
+        random_lchoice2 = random.randint(1,255)
+        random_lchoice3 = random.randint(1,255)
+
+        self.f.led(random_lchoice, random_lchoice2, random_lchoice3)
+
+
+    def random_buzzer(self, duration):
+        """Emits a random noise on the finch robot"""
+
+        random_b = random.randint(1,1000)
+        self.f.buzzer(duration, random_b)
