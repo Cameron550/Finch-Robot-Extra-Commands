@@ -20,19 +20,41 @@ class Finch():
     def led(self, *args):
         """Control three LEDs (orbs).
 
-          - hex triplet string: led('#00FF8B') or
+          - hex triplet string: led('#00FF8B'),
             0-255 RGB values: led(0, 255, 139)
+            or a general colors name(lowercase).
         """
-        if len(args) == 3:
+
+        color_list = {'red':(255,0,0), 'yellow':(255,255,0), 'green':(0,255,0),
+                      'purple':(128,0,128), 'blue':(0,0,255), 'grey':(128,128,128),
+                      'white':(255,255,255), 'black':(0,0,0), 'pink':(255,192,203),
+                      'orange':(255,165,0), 'brown':(165,42,42)}
+
+        my_color = args[0]
+
+        if my_color in color_list.keys():
+            r, g, b = [int(x) % 256 for x in color_list[my_color]]
+
+        elif len(args) == 3:
             r, g, b = [int(x) % 256 for x in args]
+
         elif (len(args) == 1 and isinstance(args[0], str)):
             color = args[0].strip()
+
             if len(color) == 7 and color.startswith('#'):
                 r = int(color[1:3], 16)
                 g = int(color[3:5], 16)
                 b = int(color[5:7], 16)
+
+            else:
+                print("Please enter an acceptable value. An acceptable value is a hexadecimal code, an RGB value, or simply a general colors name(lowercase).")
+                return
+
         else:
+            print("Please enter an acceptable value. An acceptable value is a hexadecimal code, an RGB value, or simply a general colors name(lowercase).")
             return
+
+
         self.connection.send(b'O', [r, g, b])
 
 
@@ -88,7 +110,8 @@ class Finch():
 
 
     def temperature(self, unit = 'celsius'):
-        """ Returns temperature in degrees Celsius. """
+        """ Returns temperature in degrees Celsius, or if selected, can
+            return the temperature in Fahrenheit or Kelvin. """
 
         self.connection.send(b'T')
         data = self.connection.receive()
@@ -203,6 +226,13 @@ class Finch():
     def halt(self):
         """ Set all motors and LEDs to off. """
         self.connection.send(b'X', [0])
+
+
+    def stop_and_start(self, t):
+        """Stops all motors and LEDs for a set amount of time then starts again."""
+        self.connection.close()
+        time.sleep(t)
+        self.connection.open()
 
 
     def close(self):
